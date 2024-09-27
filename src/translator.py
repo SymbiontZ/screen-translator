@@ -1,43 +1,92 @@
 from src.config import Config, translationsPath
+from typing import Optional, Union
 import deepl, json
+from deepl import TextResult, DeepLException
 
+class Translator:
+    '''
+    A class used to represent a translator
 
-def translate_text(text: str) -> str:
-    config = Config()
-    lang = config.lang
-    oldTranslations = load_old_translations()
+    Attributes
+    ----------
+    config: Config
+        An object from Config class that contains apikey and lang
 
-    translatedText = get_translation(text, lang, oldTranslations)
-    if not translatedText:
-        print("Translating from Deepl...")
-        translator = deepl.Translator(config.apiKey)
-        translatedText = str(translator.translate_text(text, target_lang=lang))
+    transCache: dict[ str, str or dict[ str, str ] ]
+        Translations storage in JSON file serialized to dictionary 
+        (The purpose is to not overuse API)
+
+    srcText: str
+        The text will be translated
     
-        save_translation(text, translatedText, lang, oldTranslations)
-
-    return translatedText
-
-# LOAD TRANSLATIONS #
-
-def load_old_translations():
-    try:
-        with open(translationsPath, "r") as tf:
-            return json.load(tf)
-    except FileNotFoundError:
-        return {}
+    srcLang: str
+        The language from srcText
     
-def get_translation(originalText, lang, oldTranslations: dict):
-    return oldTranslations.get(originalText, {}).get(lang)
-    
-# SAVE TRANSLATIONS #
+    transLang: str
+        The text already translated in language indicated
 
-def save_translations(translations):
-    with open(translationsPath, "w") as tf:
-        json.dump(translations, tf, ensure_ascii=False, indent=4)
+    transLang: str
+        The language will be translated srcText
 
-def save_translation(originalText, translatedText, lang, oldTranslations):
-    if originalText not in oldTranslations:
-        oldTranslations[originalText] = {}
+    '''
+
+    def __init__(self, srcText: str,config: Config, lang: Optional[str] = None):
+        self.config: Config = config
+        self.transCache: dict[str, Union[str, dict[str, str]]] = self.load_cache_translations()
+
+        self.srcText: str = srcText
+        self.srcLang: str = self.get_src_lang()
+
+        self.transLang: str = lang if lang is not None else config.lang
+        self.transText: str = self.translate_text()
     
-    oldTranslations[originalText][lang] = translatedText
-    save_translations(oldTranslations)
+    def __str__(self) -> str:
+        return f"[ {self.srcLang} ] {self.srcText} -> [ {self.transLang} ] {self.transText}"
+
+    def translate_text(self) -> Optional[str]:
+        transText = self.get_translation()
+        if not transText:
+            print("Translating from Deepl...")
+            translator = deepl.Translator(self.config.apiKey)
+            transResult: TextResult = translator.translate_text(self.srcText, target_lang=self.transLang)
+
+            transText = transResult.text
+            srcLang = transResult.detected_source_lang
+            self.save_translation(transText, srcLang)
+                
+        return transText
+
+    @staticmethod
+    def load_cache_translations() -> dict[dict[str, str], dict[str, str]]:
+        '''
+        Sets transCache from translations.json
+
+        If raises FileNotFoundError returns an empty dict meaning
+        it will be create a new translations.json file
+        '''
+        try:
+
+            with open(translationsPath, "r", encoding="utf-8") as tf:
+                return json.load(tf)
+            
+        except FileNotFoundError:
+            return {}
+    
+    def get_src_lang(self) -> str:
+        return self.transCache.get(self.srcText, {}).get("srcLang")
+    
+    def get_translation(self) -> str:
+        return self.transCache.get(self.srcText, {}).get(self.transLang)
+
+    def save_translations(self):
+        with open(translationsPath, "w", encoding="utf-8") as tf:
+            json.dump(self.transCache, tf, ensure_ascii=False, indent=4)
+
+    def save_translation(self, transText: str, srcLang: str):
+        if not self.srcText in self.transCache:
+            self.transCache[self.srcText] = {}
+        
+        self.transCache[self.srcText]["srcLang"] = srcLang
+        self.transCache[self.srcText][self.transLang] = transText
+        self.save_translations()
+
