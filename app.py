@@ -3,7 +3,7 @@ from src.config import Config
 
 def main():
     config = Config()
-    trans = Translator("Hello!", config=config, lang="DE")
+    trans = Translator("Me encantan los trenes", config=config, lang="EN-GB")
     print(trans)
 
 if __name__ == "__main__":

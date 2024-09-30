@@ -52,6 +52,7 @@ class Translator:
 
             transText = transResult.text
             srcLang = transResult.detected_source_lang
+            print(srcLang)
             self.save_translation(transText, srcLang)
                 
         return transText
@@ -71,6 +72,9 @@ class Translator:
             
         except FileNotFoundError:
             return {}
+        
+        except json.JSONDecodeError:
+            return {}
     
     def get_src_lang(self) -> str:
         return self.transCache.get(self.srcText, {}).get("srcLang")
@@ -86,6 +90,7 @@ class Translator:
         if not self.srcText in self.transCache:
             self.transCache[self.srcText] = {}
         
+        self.srcLang = srcLang
         self.transCache[self.srcText]["srcLang"] = srcLang
         self.transCache[self.srcText][self.transLang] = transText
         self.save_translations()
