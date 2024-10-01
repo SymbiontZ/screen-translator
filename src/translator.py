@@ -41,7 +41,7 @@ class Translator:
         self.transText: str = self.translate_text()
     
     def __str__(self) -> str:
-        return f"[ {self.srcLang} ] {self.srcText} -> [ {self.transLang} ] {self.transText}"
+        return f"[ {self.srcLang} ] {self.srcText} \n[ {self.transLang} ] {self.transText}"
 
     def translate_text(self) -> Optional[str]:
         transText = self.get_translation()
