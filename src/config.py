@@ -1,6 +1,8 @@
 import os, json
 from pathlib import Path
 from typing import Union
+import ctypes, platform
+
 localDir = os.getcwd()
 dataPath: Path = Path(os.path.join(localDir,"data"))
 confPath: Path = Path(dataPath, "config.json")
@@ -67,3 +69,12 @@ class Config:
         with open(confPath, "r") as confFile:
             data = json.load(confFile)
             return data.get("lang", "EN")
+        
+
+def make_dpi_aware():
+    """Hacer que la aplicación sea DPI-aware en sistemas Windows"""
+    try:
+        if platform.system() == "Windows":
+            ctypes.windll.shcore.SetProcessDpiAwareness(1)
+    except Exception as e:
+        print("No se pudo ajustar la DPI Awareness:", e)
