@@ -21,7 +21,7 @@ This are the commands you need to execute in shell on the directory you want to 
 git clone https://github.com/SymbiontZ/screen-translator.git
 cd screen-translator/
 python -m venv env
-.\/.venv/Scripts/activate
+.\/.env/Scripts/activate
 pip install -r requirements.txt
 ```
 
