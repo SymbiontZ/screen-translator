@@ -1,6 +1,6 @@
 import tkinter as tk
-from PIL import ImageGrab
-from datetime import datetime
+
+
 from .config import Language
 from .translator import Translator
 from .image_ocr import ImageProcessor
@@ -13,7 +13,7 @@ class AppController:
     def __init__(self, lang: Language, translator: Translator):
         self.lang = lang
         self.translator = translator
-
+        self.error = None
 
     def show_language_selector(self):
         root = tk.Tk()
@@ -25,9 +25,15 @@ class AppController:
         root.mainloop()
 
     def show_snipping_tool(self):
-        root = tk.Tk()
-        st = SnippingTool(root, self.translator, self.lang, self)
-        root.mainloop()
+        try:
+            root = tk.Tk()
+            st = SnippingTool(root, self.translator, self.lang, self)
+            root.mainloop()
+        except ValueError as e:
+            root.destroy()
+            print("TEST")
+            self.error = str(e)
+            self.show_message_box()
 
     def show_message_box(self):
         root = tk.Tk()
@@ -35,6 +41,13 @@ class AppController:
         MessageBox(root, self.translator)
         
         root.mainloop()
+
+    def show_error_box(self):
+        if self.error:
+            root = tk.Tk()
+            root.title(WINDOWTITLE)
+            ErrorBox(root, self.error)
+            root.mainloop()
         
     def run(self):
         self.show_language_selector()
@@ -108,7 +121,11 @@ class SnippingTool:
         
         
         self.remove_snipping()
-        self.do_screenshot()
+        try:
+            self.do_screenshot()
+        except ValueError as e:
+            print("TEST VALUEERROR")
+            raise e
 
     def do_screenshot(self):
         left = min(self.x1, self.x2)
@@ -117,23 +134,18 @@ class SnippingTool:
         bottom = max(self.y1, self.y2)
 
         bbox = (left, top, right, bottom)
-
-
-        timestamp = datetime.now().strftime(r"%Y-%m-%d_%H-%M-%S")
-
-        screenshot = ImageGrab.grab(bbox= bbox)
-        screenshotPath = f"./data/screenshot_{timestamp}.png"
-
-        screenshot.save(screenshotPath)
         
-        img_ocr = ImageProcessor(screenshotPath)
+        img_txt = ImageProcessor(bbox= bbox)
+        text = img_txt.get_processed_text()
+        if not text:
+            raise ValueError("Not text in the image to translator")
+        else:
+            self.translator.set_langSRC_code(self.lang)
+            self.translator.set_langDEST_code(self.lang)
 
-        self.translator.set_langSRC_code(self.lang)
-        self.translator.set_langDEST_code(self.lang)
+            self.translator.translate_text(text)
 
-        self.translator.translate_text(img_ocr.get_processed_text())
-
-        self.controller.show_message_box()
+            self.controller.show_message_box()
         # print("DIMENSIONS:", bbox)
 
     def remove_snipping(self, event=None):
@@ -200,11 +212,11 @@ class LanguageSelector:
         self.controller.show_snipping_tool()
 
 class MessageBox:
-    def __init__(self, master: tk.Tk, translator: Translator, error = None) -> None:
+    def __init__(self, master: tk.Tk, translator: Translator) -> None:
         self.master = master
         self.translator = translator
 
-        errorFont = ("Cascadia code", 14)
+        
         langHeaderFont = ("Cascadia code", 16, "bold")
         textFont = ("Cascadia code", 10)
 
@@ -212,33 +224,41 @@ class MessageBox:
 
         button = tk.Button(self.master, text="Continue.", command=self.on_exit, font=("Cascadia code", 14))
 
-        if error:
-            error_label = tk.Label(self.master, text=f"{error}", font=errorFont)
-            error_label.grid(row=0, column=0, sticky="nsew", padx=20, pady=10)
-            button.grid(row=1, column=0, padx=20, pady=10)
-        elif not self.translator.transText:
-            error_label = tk.Label(self.master, text="Cannot obtain translation. Try again later!", font=errorFont)
-            error_label.grid(row=0, column=0, sticky="nsew", padx=20, pady=10)
-            button.grid(row=1, column=0, padx=20, pady=10)
-        else:
+        if not self.translator.transText:
+            raise ValueError("Cannot obtain translation. Try again later!")
 
-            langSRC_label = tk.Label(self.master, text=f"[{translator.langSRC_code if translator.langSRC_code else "Detected Language"}]", font=langHeaderFont)
-            textSRC_label = tk.Label(self.master, text=f"{translator.srcText}", font=textFont, wraplength=wrapLength)
+        langSRC_label = tk.Label(self.master, text=f"[{translator.langSRC_code if translator.langSRC_code else "Detected Language"}]", font=langHeaderFont)
+        textSRC_label = tk.Label(self.master, text=f"{translator.srcText}", font=textFont, wraplength=wrapLength)
 
-            langDEST_label = tk.Label(self.master, text=f"[{translator.langDEST_code}]", font=langHeaderFont)
-            textDEST_label = tk.Label(self.master, text=f"{translator.transText}", font=textFont, wraplength=wrapLength)
+        langDEST_label = tk.Label(self.master, text=f"[{translator.langDEST_code}]", font=langHeaderFont)
+        textDEST_label = tk.Label(self.master, text=f"{translator.transText}", font=textFont, wraplength=wrapLength)
 
-            langSRC_label.grid(row=0, column=0, padx=20, pady=10)
-            textSRC_label.grid(row=1, column=0, padx=20, pady=10)
-            langDEST_label.grid(row=2, column=0, padx=20, pady=10)
-            textDEST_label.grid(row=3, column=0, padx=20, pady=10)
-            button.grid(row=4, column=0, padx=20, pady=10)
+        langSRC_label.grid(row=0, column=0, padx=20, pady=10)
+        textSRC_label.grid(row=1, column=0, padx=20, pady=10)
+        langDEST_label.grid(row=2, column=0, padx=20, pady=10)
+        textDEST_label.grid(row=3, column=0, padx=20, pady=10)
+        button.grid(row=4, column=0, padx=20, pady=10)
         
     def on_exit(self):
         self.master.destroy()
 
         
-        
+class ErrorBox:
+    def __init__(self, master: tk.Tk, error: str):
+        self.master = master
+        self.error = error
+
+        errorFont = ("Cascadia code", 14)
+        button = tk.Button(self.master, text="Continue.", command=self.on_exit, font=errorFont)
+
+        errorLabel = tk.Label(self.master, text=f"{error}", font=errorFont)
+        errorLabel.grid(row=0, column=0, sticky="nsew", padx=20, pady=10)
+        button.grid(row=1, column=0, padx=20, pady=10)
+
+    def on_exit(self):
+            self.master.destroy()
+
+
         
 # lang = Language()
 # root = tk.Tk()

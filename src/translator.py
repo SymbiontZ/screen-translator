@@ -30,7 +30,6 @@ class Translator:
 
     def translate_text(self, text: str) -> Optional[str]:
         self.srcText = text
-        print("Translating from Deepl...")
         if self.langSRC_code:
             transResult = self.DEEPLTranslator.translate_text(
                 self.srcText, 

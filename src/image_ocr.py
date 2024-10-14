@@ -1,16 +1,26 @@
 import cv2 as cv
-from PIL import Image
 import pytesseract
+from PIL import ImageGrab, Image
+from datetime import datetime
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
 class ImageProcessor:
-    def __init__(self, imagePath: str) -> None:
-        self.imagePath = imagePath
+    def __init__(self, bbox: tuple) -> None:
+        self.bbox = bbox
+        self.imagePath = self.do_screenshot()
         self.text: str = self.process_image()
     
-    def __str__(self):
-        return self.text
+    
+    def do_screenshot(self):
+        timestamp = datetime.now().strftime(r"%Y-%m-%d_%H-%M-%S")
+
+        screenshot = ImageGrab.grab(bbox= self.bbox)
+        screenshotPath = f"./data/screenshot_{timestamp}.png"
+
+        screenshot.save(screenshotPath)
+        
+        return screenshotPath
     
     def process_image(self):
         image = cv.imread(self.imagePath)
