@@ -120,7 +120,6 @@ class SnippingTool:
         self.master.attributes("-alpha", 0)
         
         
-        self.remove_snipping()
         try:
             self.do_screenshot()
         except ValueError as e:
@@ -148,8 +147,6 @@ class SnippingTool:
             self.controller.show_message_box()
         # print("DIMENSIONS:", bbox)
 
-    def remove_snipping(self, event=None):
-        self.master.destroy()
         
 class LanguageSelector:
     def __init__(self, master:tk.Tk, lang: Language, controller: AppController) -> None:

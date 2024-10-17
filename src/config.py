@@ -1,15 +1,14 @@
-import os
+import os, deepl
 from pathlib import Path
-from typing import Union
+from typing import Union, Optional
 import ctypes, platform, requests, pytesseract
 
 localDir = os.getcwd()
 dataPath: Path = Path(os.path.join(localDir,"data"))
-translationsPath: Path = Path(dataPath, "translations.json")
 
 pytesseract.pytesseract.tesseract_cmd = r'C:\Program Files\Tesseract-OCR\tesseract.exe'
 
-class Language:
+class TranslatorLang:
     '''
     A class used to represent languages of translator
 
@@ -18,17 +17,56 @@ class Language:
 
     Methods
     -------
+    holiiiii <3
 
+
+    en 3 dias es 18
     '''
-    def __init__(self, langSRC: str = None, langDEST: str = None):
-        self.langSRC = langSRC
-        self.langDEST = langDEST
-        self.langSRC_TESSERACT = self.get_langs_tesseract()
+    def __init__(self):
+        self.langSRC: tuple[str, str]= None
+        self.langDEST: tuple[str, str] = None
+
+        self.textSRC: str = None
+        self.textDEST: str = None
 
 
+        self.DEEPLTranslator = deepl.Translator(get_api_key())
+    
+    def set_lang_src(self, lang: str):
+        if not lang:
+            self.langSRC = (None, "Detected Language")
+        elif lang and lang not in self.get_langs_deepl("source", "list"):
+            raise ValueError("Not valid lang from to translate TEST")
+        else:
+            langsDict = self.get_langs_deepl("source", "dict")
+            langCode = langsDict.get(lang)
+            self.langSRC = (langCode, lang)
+
+
+    def set_lang_dest(self, lang: str):
+        if lang not in self.get_langs_deepl("target", "list"):
+            raise ValueError("Not valid lang from to translate")
+        
+        langsDict = self.get_langs_deepl("target", "dict")
+        langCode = langsDict[lang]
+        self.langDEST = (langCode, lang)
+
+    def translate_text(self, text: str) -> Optional[str]:
+        self.srcText = text
+        if self.langSRC[0]:
+            result = self.DEEPLTranslator.translate_text(
+                self.srcText, 
+                source_lang=self.langSRC[0], 
+                target_lang=self.langDEST[0])
+        else:
+            result = self.DEEPLTranslator.translate_text(
+                self.srcText, 
+                target_lang=self.langDEST[0])
+
+        self.textDEST = result.text
+    
     @staticmethod
     def get_langs_deepl(type: str, typedata: str) -> dict[str, str]:
-
         #REQUEST TO AVAILABLE LANGUAGES IN DEEPL
         apikey = get_api_key()
         url = "https://api-free.deepl.com/v2/languages"
@@ -45,31 +83,19 @@ class Language:
         #Transform to {"Russian":"RU","French": "FR"}
         langsDict: dict[str, str] = {lang["name"]: lang["language"] for lang in langsList}
         
-
         langsList = [lang for lang in langsDict]
         
-
         if typedata == "dict":
             return langsDict
         elif typedata == "list":
             return langsList
-        
         return None
     
     @staticmethod
     def get_langs_tesseract() -> list[str]:
         langsList = pytesseract.get_languages()
         return langsList
-    
-    def get_langSRC_code(self):
-        langsDict = self.get_langs_deepl("source", "dict")
-        return langsDict.get(self.langSRC, None)
-    
-    def get_langDEST_code(self):
-        langsDict = self.get_langs_deepl("target", "dict")
-        return langsDict.get(self.langDEST, "English (British)")
-    
-    
+
 
 def get_api_key() -> Union[str, ValueError]:
     '''
