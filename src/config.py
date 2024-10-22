@@ -17,14 +17,11 @@ class TranslatorLang:
 
     Methods
     -------
-    holiiiii <3
-
-
-    en 3 dias es 18
     '''
     def __init__(self):
         self.langSRC: tuple[str, str]= None
         self.langDEST: tuple[str, str] = None
+        #self.lang is like (EN-GB, English (British))
 
         self.textSRC: str = None
         self.textDEST: str = None
@@ -89,7 +86,16 @@ class TranslatorLang:
             return langsDict
         elif typedata == "list":
             return langsList
-        return None
+        else:
+            raise ValueError("Not valid typedata to get languages")
+
+    
+    def reset_data(self):
+        self.langSRC = None
+        self.langDEST = None
+        self.textSRC = None
+        self.textDEST = None
+        
     
     @staticmethod
     def get_langs_tesseract() -> list[str]:

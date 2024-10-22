@@ -1,15 +1,11 @@
 import tkinter as tk
 from ..config import TranslatorLang
 
-class InitialMenu(tk.Frame):
+class SnippingTool(tk.Frame):
     def __init__(self, parent, controller, tl: TranslatorLang):
-        super().__init__(parent)
+        tk.Frame.__init__(self, parent)
         self.controller = controller
         self.tl = tl
-        self.attributes("-topmost", True)
-        self.attributes("-alpha", 0.025)
-        self.attributes("-fullscreen", True)
-        #self.master.overrideredirect(True)
 
         # SCREEN BOX SNIPPING DIMENSIONS
 
@@ -25,23 +21,25 @@ class InitialMenu(tk.Frame):
         self.canvas = tk.Canvas(
             master=self,
             cursor="cross",
-            height= 1080,
-            width= 1920
+            height=1080,
+            width=1920
         )
 
-        self.canvas.pack(expand=True, fill=tk.BOTH)
+        self.canvas.grid(row=0, column=0, sticky="nsew")
+
+        # Make the grid cell expand with the window
+        self.grid_rowconfigure(0, weight=1)
+        self.grid_columnconfigure(0, weight=1)
+
         self.canvas.bind("<ButtonPress-1>", self.on_press)
         self.canvas.bind("<B1-Motion>", self.on_drag)
         self.canvas.bind("<ButtonRelease-1>", self.on_release)
 
 
-
     def on_press(self, event):
         self.x1 = self.winfo_pointerx()
         self.y1 = self.winfo_pointery()
-        self.attributes("-alpha", 0.5)
-
-        # print(self.x1, self.y1)
+        self.controller.middle_transparency()
 
     def on_drag(self, event):
         currX = self.winfo_pointerx()
@@ -60,14 +58,19 @@ class InitialMenu(tk.Frame):
         )
 
     def on_release(self, event):
+        self.canvas.delete("rect")
         self.x2 = self.winfo_pointerx()
         self.y2 = self.winfo_pointery()
 
-        self.attributes("-alpha", 0)
+        self.controller.full_transparency()
         
         left = min(self.x1, self.x2)
         top = min(self.y1, self.y2)
         right = max(self.x1, self.x2)
         bottom = max(self.y1, self.y2)
 
-        self.bbox = (left, top, right, bottom)        
+
+
+        self.controller.bboxSel = (left, top, right, bottom)
+        self.controller.deactivate_snippingtool_mode()
+        self.controller.img_to_txt()
